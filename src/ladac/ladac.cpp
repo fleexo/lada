@@ -1,0 +1,161 @@
+#include <ladac.h>
+#include <lada_lex.h>
+#include <format>
+
+#include <ast/nodes.h>
+#include <lada_combinators.inl>
+
+
+auto lada_compiler::peek_token(size_t const n) const -> std::optional<lada_token_meta const> {
+    auto const peek_index {n + _cursor};
+    if(peek_index < _tokens.size()) {
+        return _tokens[peek_index];
+    }
+
+    return std::nullopt;
+}
+auto lada_compiler::consume_token(size_t const n) -> bool {
+    auto const peek_index {n + _cursor};
+    if(_tokens.size() < peek_index) {
+        return false;
+    }
+
+    _cursor = peek_index;
+    return true;
+}
+
+auto lada_compiler::expect_single_token(lada_token const token, std::optional<std::string_view const> lexeme) const -> std::optional<lada_error> {
+    if(auto const token_result = peek_token(0); !token_result.has_value()) {
+        return lada_error{std::format("expected token '{}', but reached EOF.", lada_token_to_string(token))};
+    } else if (auto const token_value = *token_result; token_value.Token != token) {
+        return lada_error{std::format("expected token '{}', but got token '{}' at position '{}'.", lada_token_to_string(token), lada_token_to_string(token_value.Token), token_value.Position.Position)};
+    } else if(lexeme.has_value()) {
+        if(!token_value.Lexeme.has_value()) {
+            return lada_error{std::format("expected token '{}' with lexeme '{}', but got no lexeme at position '{}'.", 
+                static_cast<uint8_t>(token), *lexeme, token_value.Position.Position)};
+        } else if(*token_value.Lexeme != *lexeme) {
+            return lada_error{std::format("expected token '{}' with lexeme '{}', but got lexeme '{}' at position '{}'.", 
+                static_cast<uint8_t>(token), *lexeme, *token_value.Lexeme, token_value.Position.Position)};
+        }
+    }
+
+    return std::nullopt; // this is the success case.
+}
+
+auto lada_compiler::expect_and_emit_lexeme(lada_token const token) const -> std::expected<std::string_view, lada_error> {
+    if(auto const token_result = expect_single_token(token); token_result.has_value()) {
+        return std::unexpected(*token_result);
+    }
+    if(auto const token_lexeme = (*peek_token()).Lexeme ; token_lexeme.has_value() == false) {
+        return std::unexpected(lada_error{std::format("could not get the lexeme name of the token '{}' at position '{}'", lada_token_to_string(token), (*peek_token()).Position.Position)});
+    } else {
+        return *token_lexeme;
+    }
+}
+
+auto lada_compiler::parse_function_call() -> parse_result {
+    std::string_view function_name;
+    if(auto const token_result = expect_and_emit_lexeme(lada_token::IDENTIFIER); !token_result.has_value()) {
+        return std::unexpected(token_result.error());
+    } else {
+        function_name = *token_result;
+        consume_token();
+    }
+
+    if(auto const token_result = consume_after([&]{ return expect_single_token(lada_token::BRACKET_OPEN); })(); 
+            token_result.has_value()) {
+        return std::unexpected(*token_result);
+    }
+    std::vector<std::unique_ptr<lada_ast::node>> parameters;
+
+    std::string_view parameter_name;
+    if(auto const token_result = expect_and_emit_lexeme(lada_token::STRING); !token_result.has_value()) {
+        return std::unexpected(token_result.error());
+    } else {
+        parameter_name = *token_result;
+        consume_token();
+    }
+
+    parameters.push_back(std::make_unique<lada_ast::function_call_parameter>(
+        parameter_name
+    ));
+
+    if(auto const token_result = consume_after([&]{ return expect_single_token(lada_token::BRACKET_CLOSE); })(); 
+        token_result.has_value()) {
+        return std::unexpected(*token_result);
+    }
+
+
+    auto call_node = std::make_unique<lada_ast::function_call>(
+        function_name,
+        std::move(parameters)
+    );
+
+    return std::move(call_node);
+}
+
+auto lada_compiler::parse_block() -> parse_result {
+
+    using Predicate = std::function<std::optional<lada_error>()>;
+    
+    if(auto const token_result = consume_after([&]{ return expect_single_token(lada_token::CURLY_BRACES_OPEN); })(); 
+            token_result.has_value()) {
+        return std::unexpected(*token_result);
+    }
+
+
+    std::vector<std::unique_ptr<lada_ast::node>> statements;
+
+    auto function_call = parse_function_call();
+    if(!function_call.has_value()) {
+        return std::unexpected(function_call.error());
+    }
+    statements.emplace_back(std::move(*function_call));
+
+    if(auto const token_result = consume_after([&]{ return expect_single_token(lada_token::CURLY_BRACES_CLOSE); })(); 
+            token_result.has_value()) {
+        return std::unexpected(*token_result);
+    }
+
+    auto block = std::make_unique<lada_ast::block_node>(std::move(statements));
+
+    return std::move(block);
+}
+
+auto lada_compiler::parse_main_function() -> parse_result {
+
+    using Predicate = std::function<std::optional<lada_error>()>;
+    auto const token_result = lada_combinators::any<lada_error>(std::array<Predicate, 4>{
+        consume_after([&]{ return expect_single_token(lada_token::KEYWORD_FN); }),
+        consume_after([&]{ return expect_single_token(lada_token::IDENTIFIER, "main"); }),
+        consume_after([&]{ return expect_single_token(lada_token::BRACKET_OPEN); }),
+        consume_after([&]{ return expect_single_token(lada_token::BRACKET_CLOSE); })
+    });
+    if(token_result.has_value()) {
+        return std::unexpected(*token_result);
+    }
+
+    std::vector<std::unique_ptr<lada_ast::node>> statements;
+
+    auto block = parse_block();
+    if(!block.has_value()) {
+        return std::unexpected(block.error());
+    }
+    statements.emplace_back(std::move(*block));
+
+    auto program = std::make_unique<lada_ast::program_node>(std::move(statements));
+    return std::move(program);
+}
+
+
+auto lada_compiler::compile(std::string_view const& source_code) -> std::expected<std::unique_ptr<lada_ast::node>, lada_error> {
+    lada_lex lexer;
+    auto const lex_result = lexer.lex(source_code);
+
+    if(!lex_result.has_value()) {
+        return std::unexpected(lex_result.error());
+    }
+    
+    _tokens = *lex_result;
+    return parse_main_function();
+}

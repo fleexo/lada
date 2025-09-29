@@ -1,0 +1,47 @@
+#pragma once
+
+#include <string_view>
+#include <expected>
+#include <lada_error.h>
+#include <span>
+#include <ast/node.h>
+#include <optional>
+#include <lada_token.h>
+#include <span>
+
+class lada_compiler {
+    public:
+    [[nodiscard]] auto compile(std::string_view const& source_code) -> std::expected<std::unique_ptr<lada_ast::node>, lada_error>;
+
+    private:
+    using parse_result = std::expected<std::unique_ptr<lada_ast::node>, lada_error>;
+    using token_view = std::span<lada_token_meta const>;
+
+    auto peek_token(size_t const n = 0) const -> std::optional<lada_token_meta const>;
+    auto consume_token(size_t const n = 1) -> bool; // returns true, if it was consumed, false if end of stream was reached
+
+    auto expect_single_token(lada_token const token, std::optional<std::string_view const> expected_lexeme = {}) const -> std::optional<lada_error>;
+    auto expect_and_emit_lexeme(lada_token const token) const -> std::expected<std::string_view, lada_error>;
+
+    auto parse_main_function() -> parse_result;
+    auto parse_function_call() -> parse_result;
+    auto parse_block() -> parse_result;
+
+    #pragma region template_helper
+
+    private:
+    template <typename Pred>
+    auto consume_after(Pred&& pred) {
+        return [this, pred = std::forward<Pred>(pred)]() -> std::optional<lada_error> {
+            if (auto err = pred()) return err;
+            consume_token();
+            return std::nullopt;
+        };
+    }
+
+    #pragma endregion
+
+    private:
+    token_view _tokens;
+    size_t _cursor {0};
+};

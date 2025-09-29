@@ -1,0 +1,3 @@
+add_subdirectory(lada_common)
+add_subdirectory(lada_lex)
+add_subdirectory(ladac)

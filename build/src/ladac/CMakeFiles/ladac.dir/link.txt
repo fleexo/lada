@@ -1,0 +1,2 @@
+/usr/bin/ar qc libladac.a CMakeFiles/ladac.dir/ladac.cpp.o
+/usr/bin/ranlib libladac.a
