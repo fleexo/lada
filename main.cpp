@@ -26,7 +26,7 @@ auto main() -> int {
     lada_traverser::asmjit_traverser traverser;
     (*compile_result).traverse(traverser);
 
-    std::cout << traverser.view() << '\n';
+    traverser.run();
 
     return 0;
 }

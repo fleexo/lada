@@ -27,4 +27,8 @@ namespace lada_ast {
     struct generation_viewer {
         virtual std::string view() const = 0;
     };
+
+    struct runner {
+        virtual uint8_t run() = 0;
+    };
 }
