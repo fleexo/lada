@@ -2,8 +2,7 @@
 #include <format>
 #include <iostream>
 #include <ast/node.h>
-#include <traverse_generators/c_traverser.h>
-
+#include <traverse_generators/asmjit_traverser.h>
 
 auto print_compile_error(lada_error const& error) {
     auto const msg = std::format("compilation failed: {}", error.what());
@@ -13,7 +12,7 @@ auto print_compile_error(lada_error const& error) {
 auto main() -> int {
     auto const source_code = R"(
     fn main() {
-        print("hallo")
+        printf("hallo")
     }
     )";
 
@@ -24,7 +23,7 @@ auto main() -> int {
         return 1;
     }
 
-    lada_traverser::c_traverser traverser;
+    lada_traverser::asmjit_traverser traverser;
     (*compile_result).traverse(traverser);
 
     std::cout << traverser.view() << '\n';

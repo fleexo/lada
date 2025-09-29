@@ -3,7 +3,7 @@
 #include <vector>
 #include <string_view>
 #include <ast/block_node.h>
-#include <ast/abstract_traversal_callbacks.h>
+#include <abstract_traversal_callbacks.h>
 #include <ast/function_def_parameter_node.h>
 
 namespace lada_ast {

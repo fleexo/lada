@@ -3,6 +3,7 @@ set(target lada)
 project(${target})
 
 add_subdirectory(src)
+add_subdirectory(third-party/asmjit)
 
 set(sources
     main.cpp)
