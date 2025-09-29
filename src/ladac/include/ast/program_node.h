@@ -1,18 +1,24 @@
 #pragma once
-#include "node.h"
+#include <ast/node.h>
 #include <vector>
-#include <memory>
+#include <ast/function_def_node.h>
 
 namespace lada_ast {
 
-class program_node : public node {
+class program : public node {
 public:
-    explicit program_node(std::vector<std::unique_ptr<node>> statements = {})
-        : node(std::move(statements)) {}
+    program(main_function_def&& mainFunction)
+        : _mainFunction {std::move(mainFunction)}, node() {}
 
     node_kind kind() const override {
         return node_kind::program;
     }
+
+    void traverse(abstract_traversal& traversal) const override {
+        _mainFunction.traverse(traversal);
+    }
+private:
+    main_function_def _mainFunction;
 };
 
 } 

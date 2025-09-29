@@ -13,6 +13,12 @@ set(headers
     include/ast/function_call_node.h
     include/ast/function_call_parameter_node.h
     include/ast/block_node.h
+    include/ast/abstract_traversal_callbacks.h
+    include/ast/parameter_values.h
+    include/ast/function_def_parameter_node.h
+
+    include/traverse_generators/base_traverser.h
+    include/traverse_generators/c_traverser.h
     )
 
 add_library(${target} STATIC ${sources} ${headers})

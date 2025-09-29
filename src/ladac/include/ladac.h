@@ -8,13 +8,15 @@
 #include <optional>
 #include <lada_token.h>
 #include <span>
+#include <ast/nodes.h>
 
 class lada_compiler {
     public:
-    [[nodiscard]] auto compile(std::string_view const& source_code) -> std::expected<std::unique_ptr<lada_ast::node>, lada_error>;
+    [[nodiscard]] auto compile(std::string_view const& source_code) -> std::expected<lada_ast::program, lada_error>;
 
     private:
-    using parse_result = std::expected<std::unique_ptr<lada_ast::node>, lada_error>;
+    template<typename T>
+    using parse_result = std::expected<T, lada_error>;
     using token_view = std::span<lada_token_meta const>;
 
     auto peek_token(size_t const n = 0) const -> std::optional<lada_token_meta const>;
@@ -23,9 +25,9 @@ class lada_compiler {
     auto expect_single_token(lada_token const token, std::optional<std::string_view const> expected_lexeme = {}) const -> std::optional<lada_error>;
     auto expect_and_emit_lexeme(lada_token const token) const -> std::expected<std::string_view, lada_error>;
 
-    auto parse_main_function() -> parse_result;
-    auto parse_function_call() -> parse_result;
-    auto parse_block() -> parse_result;
+    auto parse_main_function() -> parse_result<lada_ast::main_function_def>;
+    auto parse_function_call() -> parse_result<lada_ast::function_call>;
+    auto parse_block() -> parse_result<lada_ast::block>;
 
     #pragma region template_helper
 

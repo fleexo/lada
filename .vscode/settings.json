@@ -50,6 +50,7 @@
         "ctime": "cpp",
         "iostream": "cpp",
         "istream": "cpp",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "sstream": "cpp"
     }
 }

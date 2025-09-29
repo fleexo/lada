@@ -2,6 +2,8 @@
 #include <format>
 #include <iostream>
 #include <ast/node.h>
+#include <traverse_generators/c_traverser.h>
+
 
 auto print_compile_error(lada_error const& error) {
     auto const msg = std::format("compilation failed: {}", error.what());
@@ -22,6 +24,10 @@ auto main() -> int {
         return 1;
     }
 
-    print_ast(compile_result.value().get());
+    lada_traverser::c_traverser traverser;
+    (*compile_result).traverse(traverser);
+
+    std::cout << traverser.view() << '\n';
+
     return 0;
 }

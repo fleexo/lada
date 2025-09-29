@@ -2,7 +2,6 @@
 #include <lada_lex.h>
 #include <format>
 
-#include <ast/nodes.h>
 #include <lada_combinators.inl>
 
 
@@ -41,7 +40,6 @@ auto lada_compiler::expect_single_token(lada_token const token, std::optional<st
 
     return std::nullopt; // this is the success case.
 }
-
 auto lada_compiler::expect_and_emit_lexeme(lada_token const token) const -> std::expected<std::string_view, lada_error> {
     if(auto const token_result = expect_single_token(token); token_result.has_value()) {
         return std::unexpected(*token_result);
@@ -53,7 +51,7 @@ auto lada_compiler::expect_and_emit_lexeme(lada_token const token) const -> std:
     }
 }
 
-auto lada_compiler::parse_function_call() -> parse_result {
+auto lada_compiler::parse_function_call() -> parse_result<lada_ast::function_call> {
     std::string_view function_name;
     if(auto const token_result = expect_and_emit_lexeme(lada_token::IDENTIFIER); !token_result.has_value()) {
         return std::unexpected(token_result.error());
@@ -66,35 +64,27 @@ auto lada_compiler::parse_function_call() -> parse_result {
             token_result.has_value()) {
         return std::unexpected(*token_result);
     }
-    std::vector<std::unique_ptr<lada_ast::node>> parameters;
+    std::vector<lada_ast::function_call_parameter> parameters;
 
-    std::string_view parameter_name;
+    std::string_view parameter;
     if(auto const token_result = expect_and_emit_lexeme(lada_token::STRING); !token_result.has_value()) {
         return std::unexpected(token_result.error());
     } else {
-        parameter_name = *token_result;
+        parameter = *token_result;
         consume_token();
     }
 
-    parameters.push_back(std::make_unique<lada_ast::function_call_parameter>(
-        parameter_name
-    ));
+    parameters.emplace_back(parameter);
 
     if(auto const token_result = consume_after([&]{ return expect_single_token(lada_token::BRACKET_CLOSE); })(); 
         token_result.has_value()) {
         return std::unexpected(*token_result);
     }
 
-
-    auto call_node = std::make_unique<lada_ast::function_call>(
-        function_name,
-        std::move(parameters)
-    );
-
-    return std::move(call_node);
+    return lada_ast::function_call{function_name, std::move(parameters)};
 }
 
-auto lada_compiler::parse_block() -> parse_result {
+auto lada_compiler::parse_block() -> parse_result<lada_ast::block> {
 
     using Predicate = std::function<std::optional<lada_error>()>;
     
@@ -104,7 +94,7 @@ auto lada_compiler::parse_block() -> parse_result {
     }
 
 
-    std::vector<std::unique_ptr<lada_ast::node>> statements;
+    std::vector<lada_ast::block::block_statement_variant> statements;
 
     auto function_call = parse_function_call();
     if(!function_call.has_value()) {
@@ -117,12 +107,10 @@ auto lada_compiler::parse_block() -> parse_result {
         return std::unexpected(*token_result);
     }
 
-    auto block = std::make_unique<lada_ast::block_node>(std::move(statements));
-
-    return std::move(block);
+    return lada_ast::block{std::move(statements)};
 }
 
-auto lada_compiler::parse_main_function() -> parse_result {
+auto lada_compiler::parse_main_function() -> parse_result<lada_ast::main_function_def> {
 
     using Predicate = std::function<std::optional<lada_error>()>;
     auto const token_result = lada_combinators::any<lada_error>(std::array<Predicate, 4>{
@@ -135,20 +123,16 @@ auto lada_compiler::parse_main_function() -> parse_result {
         return std::unexpected(*token_result);
     }
 
-    std::vector<std::unique_ptr<lada_ast::node>> statements;
-
     auto block = parse_block();
     if(!block.has_value()) {
         return std::unexpected(block.error());
     }
-    statements.emplace_back(std::move(*block));
 
-    auto program = std::make_unique<lada_ast::program_node>(std::move(statements));
-    return std::move(program);
+    return lada_ast::main_function_def{std::move(*block)};
 }
 
 
-auto lada_compiler::compile(std::string_view const& source_code) -> std::expected<std::unique_ptr<lada_ast::node>, lada_error> {
+auto lada_compiler::compile(std::string_view const& source_code) -> std::expected<lada_ast::program, lada_error> {
     lada_lex lexer;
     auto const lex_result = lexer.lex(source_code);
 
