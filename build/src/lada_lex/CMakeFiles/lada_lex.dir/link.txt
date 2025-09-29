@@ -1,2 +1,0 @@
-/usr/bin/ar qc liblada_lex.a CMakeFiles/lada_lex.dir/lada_lex.cpp.o
-/usr/bin/ranlib liblada_lex.a

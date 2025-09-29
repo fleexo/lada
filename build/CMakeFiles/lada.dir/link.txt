@@ -1,1 +1,0 @@
-/usr/bin/g++ -g CMakeFiles/lada.dir/main.cpp.o -o lada  src/ladac/libladac.a src/lada_lex/liblada_lex.a src/lada_common/liblada_common.a 

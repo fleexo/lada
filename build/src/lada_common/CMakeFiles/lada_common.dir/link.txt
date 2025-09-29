@@ -1,2 +1,0 @@
-/usr/bin/ar qc liblada_common.a CMakeFiles/lada_common.dir/lada_error.cpp.o
-/usr/bin/ranlib liblada_common.a
