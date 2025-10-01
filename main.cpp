@@ -3,6 +3,8 @@
 #include <iostream>
 #include <ast/node.h>
 #include <traverse_generators/asmjit_traverser.h>
+#include <elf_writer.h>
+#include <fstream>
 
 auto print_compile_error(lada_error const& error) {
     auto const msg = std::format("compilation failed: {}", error.what());
@@ -27,8 +29,10 @@ auto main() -> int {
     lada_traverser::asmjit_traverser traverser;
     (*compile_result).traverse(traverser);
 
-    traverser.view();
-    std::cerr << "!: " << (int)traverser.run() << '\n';
-
+    lada_binary::elf_writer elfWriter;
+    elfWriter.set_machine_code(traverser.view());
+    
+    auto const binary_data = elfWriter.write("hello_x86_64");
+    //std::cerr << "!: " << (int)traverser.run() << '\n';
     return 0;
 }

@@ -43,24 +43,43 @@ public:
     }
 
     void on_function_return(lada_ast::function_return const& return_node) override {
-        std::visit(
-                lada_ast::value_visitor{
-                    // String return
-                    [&](std::string_view s) {
-                    },
-                    [&](int i) {
-                        _assembler->mov(asmjit::x86::rax, i);
-                    },
-                    [&](double d) {
-                    },
-                    [&](bool b) {
-                        _assembler->mov(asmjit::x86::rax, static_cast<int>(b));
-                    }
-                },
-                return_node.value()
-        );
-        _assembler->pop(asmjit::x86::rbp);
-        _assembler->ret();
+        // std::visit(
+        //         lada_ast::value_visitor{
+        //             // String return
+        //             [&](std::string_view s) {
+        //             },
+        //             [&](int i) {
+        //                 _assembler->mov(asmjit::x86::rax, i);
+        //             },
+        //             [&](double d) {
+        //             },
+        //             [&](bool b) {
+        //                 _assembler->mov(asmjit::x86::rax, static_cast<int>(b));
+        //             }
+        //         },
+        //         return_node.value()
+        // );
+        // _assembler->pop(asmjit::x86::rbp);
+        // _assembler->ret();
+
+            std::visit(
+        lada_ast::value_visitor{
+            [&](std::string_view) {},
+            [&](int i) {
+                // exit(i)
+                _assembler->mov(asmjit::x86::rax, 60);      // sys_exit
+                _assembler->mov(asmjit::x86::rdi, i);       // exit code
+                _assembler->syscall();
+            },
+            [&](double) {},
+            [&](bool b) {
+                _assembler->mov(asmjit::x86::rax, 60);
+                _assembler->mov(asmjit::x86::rdi, static_cast<int>(b));
+                _assembler->syscall();
+            }
+        },
+        return_node.value()
+    );
         } 
 
     void on_function_call_parameter(lada_ast::function_call_parameter const& parameter, bool const more_follows) override {
@@ -71,7 +90,10 @@ public:
         // Implement parameter setup here if needed
     }
 
-std::span<uint8_t const> view() const override {
+std::span<uint8_t const> view() override {
+
+    constexpr uint64_t CODE_BASE = 0x00401000;
+    _code.relocate_to_base(CODE_BASE);
 
     auto* section = _code.section_by_id(0);
     if (!section) return {};

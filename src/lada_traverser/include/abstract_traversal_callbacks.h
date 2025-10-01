@@ -27,7 +27,7 @@ namespace lada_ast {
     };
 
     struct generation_viewer {
-        virtual std::span<uint8_t const> view() const = 0;
+        virtual std::span<uint8_t const> view() = 0;
     };
 
     struct runner {

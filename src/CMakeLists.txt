@@ -1,4 +1,5 @@
 add_subdirectory(lada_common)
 add_subdirectory(lada_lex)
 add_subdirectory(lada_traverser)
+add_subdirectory(lada_binary)
 add_subdirectory(ladac)
