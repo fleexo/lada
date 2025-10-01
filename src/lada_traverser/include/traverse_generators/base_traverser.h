@@ -22,6 +22,9 @@ public:
 
     void on_function_def_parameter(lada_ast::function_def_parameter const &, bool const) override {
     }
+
+    void on_function_return(lada_ast::function_return const&) override {
+    }
 };
 
 } // namespace lada_traverser

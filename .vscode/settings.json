@@ -51,6 +51,13 @@
         "iostream": "cpp",
         "istream": "cpp",
         "cstring": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "unordered_set": "cpp",
+        "chrono": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "ratio": "cpp",
+        "iomanip": "cpp",
+        "cinttypes": "cpp"
     }
 }

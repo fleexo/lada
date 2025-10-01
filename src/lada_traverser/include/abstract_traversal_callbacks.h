@@ -11,11 +11,13 @@ namespace lada_ast {
     class function_call;
     class function_call_parameter;
     class function_def_parameter;
+    class function_return;
     struct abstract_function_traversal {
         virtual void on_function_definition(function_def const&) = 0;
         virtual void on_function_call(function_call const&) = 0;
         virtual void on_function_call_parameter(function_call_parameter const&, bool const more_follows) = 0;
         virtual void on_function_def_parameter(function_def_parameter const&, bool const more_follows) = 0;
+        virtual void on_function_return(function_return const&) = 0;
     };
 
     struct abstract_traversal : 
@@ -25,7 +27,7 @@ namespace lada_ast {
     };
 
     struct generation_viewer {
-        virtual std::string view() const = 0;
+        virtual std::span<uint8_t const> view() const = 0;
     };
 
     struct runner {

@@ -7,11 +7,12 @@ namespace lada_ast {
 enum class node_kind : uint8_t {
     function_def,
     function_call,
+    function_return,
     parameter,
     block,
     program,
     identifier,
-    expression,
+    expression
 };
 
 class abstract_traversal;

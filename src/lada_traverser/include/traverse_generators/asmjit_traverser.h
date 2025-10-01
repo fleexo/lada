@@ -1,10 +1,10 @@
 #pragma once
-
+#include <span>
 #include <traverse_generators/base_traverser.h>
 #include <sstream>
 #include <ast/nodes.h>
 #include <map>
-#include <set>
+#include <unordered_set>
 #include <optional>
 #include <asmjit/host.h>
 
@@ -21,6 +21,7 @@ public:
         }
         if (!_assembler.has_value()) {
             _assembler.emplace(&_code);
+            _code.set_logger(&logger);
         }
     }
 
@@ -30,11 +31,37 @@ public:
     auto on_block_end() -> void override {
     }
 
-    void on_function_definition(lada_ast::function_def const& definition) override {
+    void on_function_definition(lada_ast::function_def const& definition) override { 
+        asmjit::Label label = _assembler->new_named_label(definition.name().data());
+        _assembler->bind(label);
+        _labels.emplace_back(std::move(label));
+        _assembler->push(asmjit::x86::rbp);
+        _assembler->mov(asmjit::x86::rbp, asmjit::x86::rsp);
     }
 
     void on_function_call(lada_ast::function_call const& call) override {
     }
+
+    void on_function_return(lada_ast::function_return const& return_node) override {
+        std::visit(
+                lada_ast::value_visitor{
+                    // String return
+                    [&](std::string_view s) {
+                    },
+                    [&](int i) {
+                        _assembler->mov(asmjit::x86::rax, i);
+                    },
+                    [&](double d) {
+                    },
+                    [&](bool b) {
+                        _assembler->mov(asmjit::x86::rax, static_cast<int>(b));
+                    }
+                },
+                return_node.value()
+        );
+        _assembler->pop(asmjit::x86::rbp);
+        _assembler->ret();
+        } 
 
     void on_function_call_parameter(lada_ast::function_call_parameter const& parameter, bool const more_follows) override {
         // Implement parameter loading here if needed
@@ -44,58 +71,47 @@ public:
         // Implement parameter setup here if needed
     }
 
-    std::string view() const override {
-        // Could dump generated assembly or IR
-        return "";
+std::span<uint8_t const> view() const override {
+
+    auto* section = _code.section_by_id(0);
+    if (!section) return {};
+
+    const auto& buffer = section->buffer();
+
+    {
+        std::cout << "=== ASM Output ===\n";
+        std::cout << logger.data() << "\n";
     }
+
+    return std::span<uint8_t const>(buffer.data(), buffer.size());
+}
 
 auto run() -> uint8_t override {
-    asmjit::JitRuntime runtime;
-    asmjit::CodeHolder code;
-    code.init(runtime.environment());
+    using FuncType = uint8_t(*)(); // Function pointer type with no args returning uint8_t
 
-    asmjit::x86::Assembler a(&code);
-
-    // Function prologue
-    a.push(asmjit::x86::rbp);
-    a.mov(asmjit::x86::rbp, asmjit::x86::rsp);
-
-    // First argument to printf (System V ABI: RDI)
-    const char* msg = "BLABLA";
-    a.mov(asmjit::x86::rdi, (uint64_t)msg);
-
-    // Call printf
-    void* printf_ptr = reinterpret_cast<void*>(+::printf);
-    a.call(asmjit::imm(printf_ptr));
-
-    // Function epilogue
-    a.mov(asmjit::x86::rsp, asmjit::x86::rbp);
-    a.pop(asmjit::x86::rbp);
-    a.ret();
-
-    // Add the generated function to the runtime
-    using Fn = void (*)();
-    Fn fn;
-    auto err = runtime.add(&fn, &code);
+    FuncType fn = nullptr;
+    asmjit::Error err = _runtime.add(&fn, &_code);
     if (err != asmjit::kErrorOk) {
-        throw std::runtime_error{"Failed to add JIT function"};
+        std::cerr << "Failed to add JIT code: " << static_cast<uint32_t>(err) << "\n";
+        return 0;
     }
 
-    // Call the generated function
-    fn();
+    uint8_t result = fn(); // Call the compiled function
 
-    // Release JIT memory
-    runtime.release(fn);
+    _runtime.release(fn); // Free JIT memory
 
-    return 0;
+    return result;
 }
 
     
 
 private:
     asmjit::JitRuntime _runtime;
+                asmjit::StringLogger logger;
     asmjit::CodeHolder _code;
     std::optional<asmjit::x86::Assembler> _assembler;
+
+    std::vector<asmjit::Label> _labels;
 
     bool _creatingCallParameter{false};
     bool _creatingDefParameter{false};

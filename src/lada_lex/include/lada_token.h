@@ -7,6 +7,7 @@ enum class lada_token : uint8_t {
     KEYWORD_STRING,
 
     KEYWORD_FN,
+    KEYWORD_RETURN,
 
     CURLY_BRACES_OPEN,
     CURLY_BRACES_CLOSE,
@@ -26,6 +27,7 @@ inline std::string_view lada_token_to_string(lada_token tok) {
         case lada_token::KEYWORD_VOID:    return "KEYWORD_VOID";
         case lada_token::KEYWORD_STRING:  return "KEYWORD_STRING";
         case lada_token::KEYWORD_FN:      return "KEYWORD_FN";
+        case lada_token::KEYWORD_RETURN:      return "KEYWORD_RETURN";
         case lada_token::CURLY_BRACES_OPEN: return "CURLY_BRACES_OPEN";
         case lada_token::CURLY_BRACES_CLOSE: return "CURLY_BRACES_CLOSE";
         case lada_token::BRACKET_OPEN:    return "BRACKET_OPEN";

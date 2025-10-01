@@ -84,6 +84,52 @@ auto lada_compiler::parse_function_call() -> parse_result<lada_ast::function_cal
     return lada_ast::function_call{function_name, std::move(parameters)};
 }
 
+auto lada_compiler::parse_return() -> parse_result<lada_ast::function_return> {
+    if(auto const token_result = consume_after([&]{ return expect_single_token(lada_token::KEYWORD_RETURN); })(); 
+        token_result.has_value()) {
+        return std::unexpected(*token_result);
+    }
+
+    int return_value;
+    if(auto const token_result = expect_and_emit_lexeme(lada_token::NUMBER); !token_result.has_value()) {
+        return std::unexpected(token_result.error());
+    } else {
+        return_value = std::atoi((*token_result).data());
+        consume_token();
+    }
+
+    return lada_ast::function_return{std::move(return_value)};
+}
+
+auto lada_compiler::parse_statement()
+    -> parse_result<lada_ast::block::block_statement_variant>
+{
+    if (auto const end_statement = expect_single_token(lada_token::CURLY_BRACES_CLOSE);
+        !end_statement.has_value())
+    {
+        return std::monostate{};
+    }
+
+    if (auto token_res = parse_return(); token_res.has_value()) {
+        auto variant = lada_ast::block::block_statement_variant{
+            std::in_place_type<lada_ast::function_return>, 
+            std::move(*token_res)
+        };
+         return variant;
+    }
+
+    if (auto token_res = parse_function_call(); token_res.has_value()) {
+        auto variant = lada_ast::block::block_statement_variant{
+            std::in_place_type<lada_ast::function_call>, 
+            std::move(*token_res)
+        };
+         return variant;
+    }
+
+    return std::unexpected(lada_error{"Unknown statement type"});
+}
+
+
 auto lada_compiler::parse_block() -> parse_result<lada_ast::block> {
 
     using Predicate = std::function<std::optional<lada_error>()>;
@@ -95,12 +141,15 @@ auto lada_compiler::parse_block() -> parse_result<lada_ast::block> {
 
 
     std::vector<lada_ast::block::block_statement_variant> statements;
-
-    auto function_call = parse_function_call();
-    if(!function_call.has_value()) {
-        return std::unexpected(function_call.error());
+    while (true) {
+        auto statement = parse_statement();
+        if (!statement.has_value()) break;
+        if (std::holds_alternative<std::monostate>(statement.value())) {
+            break;
+        }
+        statements.emplace_back(std::move(statement.value()));
     }
-    statements.emplace_back(std::move(*function_call));
+
 
     if(auto const token_result = consume_after([&]{ return expect_single_token(lada_token::CURLY_BRACES_CLOSE); })(); 
             token_result.has_value()) {

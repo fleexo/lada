@@ -25,9 +25,10 @@ auto lada_lex::try_get_single_token(char const rune) const -> std::optional<std:
 }
 
 auto lada_lex::try_get_keyword_token(std::string_view const& rest_data) const -> std::optional<std::pair<lada_token_meta, size_t>> {
-    static constexpr std::array<std::pair<std::string_view, lada_token>, 3> KEYWORD_MAP = {
+    static constexpr std::array<std::pair<std::string_view, lada_token>, 4> KEYWORD_MAP = {
         {{"fn", lada_token::KEYWORD_FN},
         {"void", lada_token::KEYWORD_VOID},
+        {"return", lada_token::KEYWORD_RETURN},
         {"string", lada_token::KEYWORD_STRING}}
     };
 

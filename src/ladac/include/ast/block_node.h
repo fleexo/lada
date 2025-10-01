@@ -3,13 +3,14 @@
 #include <vector>
 #include <variant>
 #include <ast/function_call_node.h>
+#include <ast/return_node.h>
 #include <abstract_traversal_callbacks.h>
 
 namespace lada_ast {
 
 class block : public node {
 public:
-    using block_statement_variant = std::variant<function_call>;
+    using block_statement_variant = std::variant<function_call, function_return, std::monostate>;
 
     block(std::vector<block_statement_variant>&& statements)
         : _statements{std::move(statements)} {}
@@ -22,7 +23,11 @@ public:
         traversal.on_block_start();
         for (auto const& statement : _statements) {
             std::visit([&traversal](auto const& node) {
+            if constexpr (std::is_same_v<std::decay_t<decltype(node)>, std::monostate>) {
+                return;
+            } else {
                 node.traverse(traversal);
+            }
             }, statement);
         }
         traversal.on_block_end();

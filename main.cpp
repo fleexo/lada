@@ -12,8 +12,9 @@ auto print_compile_error(lada_error const& error) {
 auto main() -> int {
     auto const source_code = R"(
     fn main() {
-        printf("hallo")
+        return 100
     }
+
     )";
 
     lada_compiler compiler;
@@ -26,7 +27,8 @@ auto main() -> int {
     lada_traverser::asmjit_traverser traverser;
     (*compile_result).traverse(traverser);
 
-    traverser.run();
+    traverser.view();
+    std::cerr << "!: " << (int)traverser.run() << '\n';
 
     return 0;
 }

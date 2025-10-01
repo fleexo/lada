@@ -27,6 +27,8 @@ class lada_compiler {
 
     auto parse_main_function() -> parse_result<lada_ast::main_function_def>;
     auto parse_function_call() -> parse_result<lada_ast::function_call>;
+    auto parse_return() -> parse_result<lada_ast::function_return>;
+    auto parse_statement() -> parse_result<lada_ast::block::block_statement_variant>;
     auto parse_block() -> parse_result<lada_ast::block>;
 
     #pragma region template_helper
