@@ -19,10 +19,10 @@ public:
         return node_kind::block;
     }
 
-    void traverse(abstract_traversal& traversal) const override {
+    void traverse(abstract_traversal& traversal) override {
         traversal.on_block_start();
-        for (auto const& statement : _statements) {
-            std::visit([&traversal](auto const& node) {
+        for (auto& statement : _statements) {
+            std::visit([&traversal](auto& node) {
             if constexpr (std::is_same_v<std::decay_t<decltype(node)>, std::monostate>) {
                 return;
             } else {

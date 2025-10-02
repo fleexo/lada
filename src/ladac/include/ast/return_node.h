@@ -9,7 +9,7 @@ namespace lada_ast {
 
         node_kind kind() const override { return node_kind::function_return; }
 
-        void traverse(abstract_traversal& traversal) const override {
+        void traverse(abstract_traversal& traversal) override {
             traversal.on_function_return(*this);
         }
     };

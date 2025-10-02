@@ -27,7 +27,7 @@ public:
     virtual ~node() = default;
 
     virtual node_kind kind() const = 0;
-    virtual void traverse(abstract_traversal& traversal) const = 0;
+    virtual void traverse(abstract_traversal& traversal) = 0;
 };
 
 }

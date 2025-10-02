@@ -19,10 +19,13 @@ public:
 
     node_kind kind() const override { return node_kind::function_def; }
 
-    void traverse(abstract_traversal& traversal) const override {
+    void traverse(abstract_traversal& traversal) override {
         traversal.on_function_definition(*this);
-        for(auto const& param : _params) {
-            param.traverse(traversal);
+        for(size_t i = 0; i < _params.size(); ++i) {
+            if(i == _params.size() - 1) {
+                _params[i].set_last();
+            }
+            _params[i].traverse(traversal);
         }
         _functionBody.traverse(traversal);
     }
@@ -37,13 +40,6 @@ private:
     std::string_view _name;
     std::vector<function_def_parameter> _params;
     block _functionBody;
-};
-
-class main_function_def : public function_def {
-    public:
-    inline static constexpr auto MAIN_FUNCTION_NAME = "main";
-    main_function_def(block&& body) : function_def {MAIN_FUNCTION_NAME, {}, std::move(body)} {
-    };
 };
 
 }

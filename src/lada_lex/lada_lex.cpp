@@ -12,6 +12,8 @@ auto lada_lex::try_get_single_token(char const rune) const -> std::optional<std:
         case ';': mapped_token = lada_token::SEMICOLON; break;
         case '(': mapped_token = lada_token::BRACKET_OPEN; break;
         case ')': mapped_token = lada_token::BRACKET_CLOSE; break;
+        case ',': mapped_token = lada_token::COMMA; break;
+        case ':': mapped_token = lada_token::COLON; break;
         default: return std::nullopt;
     }
 
@@ -25,9 +27,10 @@ auto lada_lex::try_get_single_token(char const rune) const -> std::optional<std:
 }
 
 auto lada_lex::try_get_keyword_token(std::string_view const& rest_data) const -> std::optional<std::pair<lada_token_meta, size_t>> {
-    static constexpr std::array<std::pair<std::string_view, lada_token>, 4> KEYWORD_MAP = {
+    static constexpr std::array<std::pair<std::string_view, lada_token>, 5> KEYWORD_MAP = {
         {{"fn", lada_token::KEYWORD_FN},
         {"void", lada_token::KEYWORD_VOID},
+        {"int", lada_token::KEYWORD_INT},
         {"return", lada_token::KEYWORD_RETURN},
         {"string", lada_token::KEYWORD_STRING}}
     };

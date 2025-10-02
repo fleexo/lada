@@ -18,12 +18,17 @@ public:
 
     node_kind kind() const override { return node_kind::parameter; }
 
-    void traverse(abstract_traversal& traversal) const override {
-        traversal.on_function_call_parameter(*this, false);
+    void traverse(abstract_traversal& traversal) override {
+        traversal.on_function_call_parameter(*this, !_isLast);
+    }
+
+    void set_last() {
+        _isLast = true;
     }
 
 private:
     value_variant _value;
+    bool _isLast {false};
 };
 
 

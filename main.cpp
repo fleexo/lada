@@ -14,13 +14,13 @@ auto print_compile_error(lada_error const& error) {
 auto main() -> int {
     auto const source_code = R"(
     fn main() {
-        return 100
+        exit(100)
     }
 
     )";
 
     lada_compiler compiler;
-    auto const compile_result = compiler.compile(source_code);
+    auto compile_result = compiler.compile(source_code);
     if(!compile_result.has_value()) {
         print_compile_error(compile_result.error());
         return 1;

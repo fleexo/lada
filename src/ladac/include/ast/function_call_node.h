@@ -17,11 +17,14 @@ public:
         return node_kind::function_call;
     }
 
-    void traverse(abstract_traversal& traversal) const override {
-        traversal.on_function_call(*this);
-        for(auto const& param : _parameters) {
-            param.traverse(traversal);
+    void traverse(abstract_traversal& traversal) override {
+        for(size_t i = 0; i < _parameters.size(); ++i) { // first traverse function parameters
+            if(i == _parameters.size() - 1) {
+                _parameters[i].set_last();
+            }
+            _parameters[i].traverse(traversal);
         }
+        traversal.on_function_call(*this);
     }
 
     std::string_view const& name() const { return _name; }

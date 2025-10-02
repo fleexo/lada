@@ -51,6 +51,32 @@ auto lada_compiler::expect_and_emit_lexeme(lada_token const token) const -> std:
     }
 }
 
+auto lada_compiler::get_value_type(lada_token const token) const -> std::optional<lada_ast::value_type> {
+    switch(token) {
+        case lada_token::KEYWORD_DOUBLE: return lada_ast::value_type::DOUBLE;
+        case lada_token::KEYWORD_BOOL: return lada_ast::value_type::BOOL;
+        case lada_token::KEYWORD_STRING: return lada_ast::value_type::STRING;
+        case lada_token::KEYWORD_INT: return lada_ast::value_type::INT;
+        default: return {};
+    }
+}
+
+auto lada_compiler::expect_type_keyword() const -> parse_result<lada_ast::value_type> {
+    using Predicate = std::function<std::optional<lada_error>()>;
+
+    auto const actual_token_opt {peek_token()};
+    if(!actual_token_opt.has_value()) {
+        return std::unexpected(lada_error{"expected token value type specifier, but reached EOF."});
+    }
+
+    if(auto const value_type_result = get_value_type(actual_token_opt->Token); value_type_result.has_value()) {
+        return *value_type_result;
+    }
+
+    return std::unexpected{lada_error{std::format("expected value type specifier, at position '{}', but got '{}'",
+        actual_token_opt->Position.Position, lada_token_to_string(actual_token_opt->Token))}};
+}
+
 auto lada_compiler::parse_function_call() -> parse_result<lada_ast::function_call> {
     std::string_view function_name;
     if(auto const token_result = expect_and_emit_lexeme(lada_token::IDENTIFIER); !token_result.has_value()) {
@@ -66,11 +92,11 @@ auto lada_compiler::parse_function_call() -> parse_result<lada_ast::function_cal
     }
     std::vector<lada_ast::function_call_parameter> parameters;
 
-    std::string_view parameter;
-    if(auto const token_result = expect_and_emit_lexeme(lada_token::STRING); !token_result.has_value()) {
+    int parameter;
+    if(auto const token_result = expect_and_emit_lexeme(lada_token::NUMBER); !token_result.has_value()) {
         return std::unexpected(token_result.error());
     } else {
-        parameter = *token_result;
+        parameter = std::atoi((*token_result).data());
         consume_token();
     }
 
@@ -159,25 +185,101 @@ auto lada_compiler::parse_block() -> parse_result<lada_ast::block> {
     return lada_ast::block{std::move(statements)};
 }
 
-auto lada_compiler::parse_main_function() -> parse_result<lada_ast::main_function_def> {
+auto lada_compiler::parse_function_def_parameter() -> parse_result<lada_ast::function_def_parameter> {
+    std::string_view parameter_name;
+    if(auto const token_result = expect_and_emit_lexeme(lada_token::IDENTIFIER); !token_result.has_value()) {
+        return std::unexpected(token_result.error());
+    } else {
+        parameter_name = *token_result;
+        consume_token();
+    }
 
-    using Predicate = std::function<std::optional<lada_error>()>;
-    auto const token_result = lada_combinators::any<lada_error>(std::array<Predicate, 4>{
-        consume_after([&]{ return expect_single_token(lada_token::KEYWORD_FN); }),
-        consume_after([&]{ return expect_single_token(lada_token::IDENTIFIER, "main"); }),
-        consume_after([&]{ return expect_single_token(lada_token::BRACKET_OPEN); }),
-        consume_after([&]{ return expect_single_token(lada_token::BRACKET_CLOSE); })
-    });
-    if(token_result.has_value()) {
-        return std::unexpected(*token_result);
+    if(auto const colon_result = consume_after([&]{ return expect_single_token(lada_token::COLON); })(); 
+        colon_result.has_value()) {
+        return std::unexpected(*colon_result);
+    }
+
+    if(auto const type_result = expect_type_keyword(); 
+        !type_result.has_value()) {
+        return std::unexpected(type_result.error());
+    } else {
+        consume_token();
+        return lada_ast::function_def_parameter{std::move(parameter_name), *type_result};
+    }
+}
+
+auto lada_compiler::parse_function_def_parameters() -> parse_result<std::vector<lada_ast::function_def_parameter>> {
+    std::vector<lada_ast::function_def_parameter> parameters;
+    auto current_token_opt = peek_token();
+    if(!current_token_opt.has_value()) {
+        return std::unexpected(lada_error{std::format("expected token '{}', but reached EOF.", lada_token_to_string(lada_token::BRACKET_CLOSE))});
+    }
+
+    if(current_token_opt->Token == lada_token::BRACKET_CLOSE) {
+        return {};
+    }
+
+    while(true) {
+        if(auto def_parameter_result = parse_function_def_parameter(); !def_parameter_result.has_value()) {
+            return std::unexpected(def_parameter_result.error());
+        } else {
+            parameters.emplace_back(std::move(*def_parameter_result));
+
+            auto current_token_opt = peek_token();
+            if(!current_token_opt.has_value()) {
+                return std::unexpected(lada_error{std::format("expected token '{}', but reached EOF.", lada_token_to_string(lada_token::BRACKET_CLOSE))});
+            }
+
+            if(current_token_opt->Token == lada_token::BRACKET_CLOSE) {
+                return parameters;
+            }
+
+            if(auto const comma_result = consume_after([&]{ return expect_single_token(lada_token::COMMA); })(); 
+                comma_result.has_value()) {
+                return std::unexpected(*comma_result);
+            }
+        }
+    }
+}
+
+auto lada_compiler::parse_function_def() -> parse_result<lada_ast::function_def> {
+
+    if(auto const fn_result = consume_after([&]{ return expect_single_token(lada_token::KEYWORD_FN); })(); 
+        fn_result.has_value()) {
+        return std::unexpected(*fn_result);
+    }
+
+    std::string_view function_name;
+    if(auto token_result = expect_and_emit_lexeme(lada_token::IDENTIFIER); !token_result.has_value()) {
+        return std::unexpected(token_result.error());
+    } else {
+        function_name = std::move(*token_result);
+        consume_token();
+    }
+
+
+    if(auto const bracket_open = consume_after([&]{ return expect_single_token(lada_token::BRACKET_OPEN); })(); 
+        bracket_open.has_value()) {
+        return std::unexpected(*bracket_open);
+    }
+
+    std::vector<lada_ast::function_def_parameter> parameters;
+    if(auto param_res = parse_function_def_parameters(); !param_res.has_value()) {
+        return std::unexpected(param_res.error());
+    } else {
+        parameters = std::move(*param_res);
+    }
+
+    if(auto const bracket_close = consume_after([&]{ return expect_single_token(lada_token::BRACKET_CLOSE); })(); 
+        bracket_close.has_value()) {
+        return std::unexpected(*bracket_close);
     }
 
     auto block = parse_block();
     if(!block.has_value()) {
         return std::unexpected(block.error());
     }
-
-    return lada_ast::main_function_def{std::move(*block)};
+    return lada_ast::function_def{std::move(function_name), std::move(parameters), std::move(*block)};
 }
 
 
@@ -190,5 +292,5 @@ auto lada_compiler::compile(std::string_view const& source_code) -> std::expecte
     }
     
     _tokens = *lex_result;
-    return parse_main_function();
+    return parse_function_def();
 }

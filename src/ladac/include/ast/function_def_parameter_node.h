@@ -19,13 +19,18 @@ public:
 
     node_kind kind() const override { return node_kind::parameter; }
 
-    void traverse(abstract_traversal& traversal) const override {
-        traversal.on_function_def_parameter(*this, false);
+    void traverse(abstract_traversal& traversal) override {
+        traversal.on_function_def_parameter(*this, !_isLast);
+    }
+
+    void set_last() {
+        _isLast = true;
     }
 
 private:
     value_type const _type;
     std::string_view const _name;
+    bool _isLast = false;
 };
 
 

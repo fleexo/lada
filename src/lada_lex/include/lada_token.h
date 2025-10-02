@@ -5,6 +5,9 @@
 enum class lada_token : uint8_t {
     KEYWORD_VOID,
     KEYWORD_STRING,
+    KEYWORD_INT,
+    KEYWORD_BOOL,
+    KEYWORD_DOUBLE,
 
     KEYWORD_FN,
     KEYWORD_RETURN,
@@ -16,6 +19,8 @@ enum class lada_token : uint8_t {
 
     EQUALS,
     SEMICOLON,
+    COLON,
+    COMMA,
 
     STRING,
     NUMBER,
@@ -27,6 +32,7 @@ inline std::string_view lada_token_to_string(lada_token tok) {
         case lada_token::KEYWORD_VOID:    return "KEYWORD_VOID";
         case lada_token::KEYWORD_STRING:  return "KEYWORD_STRING";
         case lada_token::KEYWORD_FN:      return "KEYWORD_FN";
+        case lada_token::KEYWORD_INT:    return "KEYWORD_INT";
         case lada_token::KEYWORD_RETURN:      return "KEYWORD_RETURN";
         case lada_token::CURLY_BRACES_OPEN: return "CURLY_BRACES_OPEN";
         case lada_token::CURLY_BRACES_CLOSE: return "CURLY_BRACES_CLOSE";
@@ -37,6 +43,8 @@ inline std::string_view lada_token_to_string(lada_token tok) {
         case lada_token::STRING:          return "STRING";
         case lada_token::NUMBER:          return "NUMBER";
         case lada_token::IDENTIFIER:      return "IDENTIFIER";
+        case lada_token::COLON:          return "COLON";
+        case lada_token::COMMA:      return "COMMA";
     }
     return "UNKNOWN";
 }
