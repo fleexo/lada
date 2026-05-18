@@ -1,0 +1,12 @@
+# lada
+
+Experimental C++ compiler/runtime project.
+
+Focus areas:
+- language parsing / compilation pipeline
+- AST traversal
+- machine-code generation via asmjit
+- ELF binary generation
+- CMake-based modular C++ project structure
+
+This is not a finished product, but a systems programming experiment showing my interest in compiler/runtime architecture.
